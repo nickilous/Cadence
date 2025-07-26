@@ -7,6 +7,7 @@
 
 import Foundation
 
+public typealias OrganizedQueryResults<Result: Unit> = [TrainingSeason: [ActivityOptions: [MetricOptions: [SampleMetricContainer<Result>]]]]
 
 public protocol Store {
     var supportedActivityTypes: [ActivityOptions] { get }
@@ -17,6 +18,8 @@ public protocol Store {
     var isAvailable: Bool { get }
     
     func fetch<Result:Unit>(_ activity: ActivityOptions, metrics: MetricOptions, in season: TrainingSeason) async throws -> [SampleMetricContainer<Result>]
+    func fetch<Result:Unit>(query: TrainingQuery) async throws -> [SampleMetricContainer<Result>]
+    func fetchOrganized<Result:Unit>(query: TrainingQuery) async throws -> OrganizedQueryResults<Result>
     func requestAuthorization(for metricTypes: [MetricOptions], options: [AuthorizationOption]) async throws
 }
 #if canImport(HealthKit)
@@ -44,6 +47,57 @@ extension HKHealthStore : Store {
             endDate: season.endDate,
             measurment: Measurement(value: 10, unit: unit)
         )]
+    }
+    
+    public func fetch<Result:Unit>(query: TrainingQuery) async throws -> [SampleMetricContainer<Result>] {
+        var results: [SampleMetricContainer<Result>] = []
+        
+        let season = query.components.first(where: { $0 is TrainingSeason }) as? TrainingSeason
+        guard let season = season else {
+            throw CadenceError.unknownActivityOption("No TrainingSeason found in query")
+        }
+        
+        let activityTargets = query.components.compactMap { $0 as? ActivityTargetComponent }
+        
+        for activityTarget in activityTargets {
+            for metricTarget in activityTarget.metrics {
+                let sampleData: [SampleMetricContainer<Result>] = try await fetch(activityTarget.activityTarget, metrics: metricTarget.metricTarget, in: season)
+                results.append(contentsOf: sampleData)
+            }
+        }
+        
+        return results
+    }
+    
+    public func fetchOrganized<Result:Unit>(query: TrainingQuery) async throws -> OrganizedQueryResults<Result> {
+        var organizedResults: OrganizedQueryResults<Result> = [:]
+        
+        let season = query.components.first(where: { $0 is TrainingSeason }) as? TrainingSeason
+        guard let season = season else {
+            throw CadenceError.unknownActivityOption("No TrainingSeason found in query")
+        }
+        
+        let activityTargets = query.components.compactMap { $0 as? ActivityTargetComponent }
+        
+        for activityTarget in activityTargets {
+            for metricTarget in activityTarget.metrics {
+                let sampleData: [SampleMetricContainer<Result>] = try await fetch(activityTarget.activityTarget, metrics: metricTarget.metricTarget, in: season)
+                
+                if organizedResults[season] == nil {
+                    organizedResults[season] = [:]
+                }
+                if organizedResults[season]![activityTarget.activityTarget] == nil {
+                    organizedResults[season]![activityTarget.activityTarget] = [:]
+                }
+                if organizedResults[season]![activityTarget.activityTarget]![metricTarget.metricTarget] == nil {
+                    organizedResults[season]![activityTarget.activityTarget]![metricTarget.metricTarget] = []
+                }
+                
+                organizedResults[season]![activityTarget.activityTarget]![metricTarget.metricTarget]!.append(contentsOf: sampleData)
+            }
+        }
+        
+        return organizedResults
     }
     
     public func requestAuthorization(for metricTypes: [MetricOptions], options: [AuthorizationOption]) async throws {

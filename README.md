@@ -131,6 +131,41 @@ let query = TrainingQuery(id: UUID()) {
 }
 ```
 
+#### Fetching Query Results
+
+Use queries with any Store to fetch data in two formats:
+
+**Flat Array Results:**
+```swift
+let healthStore = HKHealthStore()
+let results: [SampleMetricContainer<UnitPower>] = try await healthStore.fetch(query: query)
+
+// Access individual samples
+for sample in results {
+    print("\(sample.activity): \(sample.metric) = \(sample.measurment)")
+}
+```
+
+**Organized Hierarchical Results:**
+```swift
+let organizedResults = try await healthStore.fetchOrganized(query: query)
+
+// Access data by season → activity → metric
+if let runningHeartRate = organizedResults[season]?[.running]?[.heartRate] {
+    for sample in runningHeartRate {
+        print("Heart Rate: \(sample.measurment)")
+    }
+}
+
+if let runningPower = organizedResults[season]?[.running]?[.runningPower] {
+    for sample in runningPower {
+        print("Power: \(sample.measurment)")
+    }
+}
+```
+
+The hierarchical format makes it easy to organize results when working with complex queries that span multiple activities and metrics.
+
 ## HealthKit Integration
 
 Cadence provides automatic HealthKit integration when available:
