@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import HealthKit
+
 
 public protocol Store {
     var supportedActivityTypes: [ActivityOptions] { get }
@@ -19,7 +19,8 @@ public protocol Store {
     func fetch<Result:Unit>(_ activity: ActivityOptions, metrics: MetricOptions, in season: TrainingSeason) async throws -> [SampleMetricContainer<Result>]
     func requestAuthorization(for metricTypes: [MetricOptions], options: [AuthorizationOption]) async throws
 }
-
+#if canImport(HealthKit)
+import HealthKit
 extension HKHealthStore : Store {
     public var supportedActivityTypes: [ActivityOptions]{[]}
     public var supportedMetricTypes: [MetricOptions] { [.heartRate, .restingHeartRate] }
@@ -65,5 +66,4 @@ extension HKHealthStore : Store {
         }
     }
 }
- 
-
+#endIf
