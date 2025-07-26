@@ -20,3 +20,16 @@ public extension SampleMetric {
         .init(activity: activity, metric: metric, startDate: startDate, endDate: endDate, measurment: .init(value: value, unit: unit))
     }
 }
+
+
+#if canImport(AppIntents)
+public extension SampleMetric where U == UnitPower {
+    func convertToAppEntity() -> PowerMetricEntity {
+        .init(id: self.id as! UUID,
+              type: .average,
+              startDate: self.startDate,
+              endDate: self.endDate,
+              measurement: self.measurment)
+    }
+}
+#endif

@@ -16,3 +16,8 @@ public protocol MetricCalc: Identifiable, CustomStringConvertible, Hashable, Sen
     associatedtype Result: Sample
     func compute(from store: [Store], in season: TrainingSeason) async throws -> Result
 }
+
+
+extension MetricCalc {
+    
+}

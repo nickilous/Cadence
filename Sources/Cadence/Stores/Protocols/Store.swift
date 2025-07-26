@@ -66,4 +66,4 @@ extension HKHealthStore : Store {
         }
     }
 }
-#endIf
+#endif

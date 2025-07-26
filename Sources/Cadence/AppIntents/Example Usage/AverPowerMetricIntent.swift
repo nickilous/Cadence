@@ -6,6 +6,7 @@
 //
 #if canImport(AppIntents)
 import Foundation
+import AppIntents
 
 public struct AveragePowerMetricIntent: AppIntent {
     public init() {}
@@ -25,11 +26,7 @@ public struct AveragePowerMetricIntent: AppIntent {
         let average = try await averagePowerMetric.compute(from: [], in: .init(seasonInterval: .init(startDate: startDate, endDate: endDate), builder: {
             
         }))
-        return .result(value: PowerMetricEntity(id: average.id as! UUID,
-                                                type: .average,
-                                                startDate: average.startDate,
-                                                endDate: average.endDate,
-                                                measurement: average.measurment) )
+        return .result(value: average.convertToAppEntity() )
     }
 }
 #endif

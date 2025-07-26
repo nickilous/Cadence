@@ -58,15 +58,3 @@ public struct AveragePowerMetric: MetricCalc {
                        unit: sampleMetrics.unit)
     }
 }
-
-public struct AverageheartRate : MetricCalc {
-    public var id: UUID = .init()
-    
-    public var description: String { "Average Heart Rate" }
-    public var activity: ActivityOptions { .running }
-    public var metrics: MetricOptions { .heartRate }
-    
-    public func compute(from store: [Store], in season: TrainingSeason) async throws -> some  SampleMetric<UnitFrequency>{
-        return .result(activity: .running, metric: metrics, startDate: .now, endDate: .now, value: 10, unit: .beatsPerMinute)
-    }
-}
