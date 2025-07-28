@@ -16,7 +16,7 @@ import Foundation
 /// ## Components
 ///
 /// A training query is built using various components:
-/// - **TrainingSeason**: Defines the time period and training phases
+/// - **CadenceTrainingSeason**: Defines the time period and training phases
 /// - **ActivityTargetComponent**: Specifies which activities to include
 /// - **MetricTargetComponent**: Specifies which metrics to fetch for each activity
 ///
@@ -30,8 +30,8 @@ import Foundation
 /// **Simple Query:**
 /// ```swift
 /// let query = TrainingQuery(id: UUID()) {
-///     TrainingSeason(seasonInterval: seasonRange) {
-///         TrainingPhase(activityType: .running, phaseType: .building, trainingWeekRange: range)
+///     CadenceTrainingSeason(seasonInterval: seasonRange) {
+///         CadenceTrainingPhase(activityType: .running, phaseType: .building, trainingWeekRange: range)
 ///     }
 ///     ActivityTargetComponent(activityTarget: .running) {
 ///         MetricTargetComponent(metricTarget: .heartRate)
@@ -42,7 +42,7 @@ import Foundation
 /// **Multi-Activity Query:**
 /// ```swift
 /// let query = TrainingQuery(id: UUID()) {
-///     TrainingSeason(seasonInterval: seasonRange) { /* phases */ }
+///     CadenceTrainingSeason(seasonInterval: seasonRange) { /* phases */ }
 ///     ActivityTargetComponent(activityTarget: .running) {
 ///         MetricTargetComponent(metricTarget: .heartRate)
 ///         MetricTargetComponent(metricTarget: .runningPower)
@@ -56,7 +56,7 @@ import Foundation
 ///
 /// ## Fetching Data
 ///
-/// Once constructed, use the query with any `Store` to fetch data:
+/// Once constructed, use the query with any `CadenceStore` to fetch data:
 /// ```swift
 /// let results = try await store.fetch(query: query)
 /// let organizedResults = try await store.fetchOrganized(query: query)

@@ -12,12 +12,12 @@ import Foundation
 ///
 /// Conforming types define how to compute specific metrics (like average power, heart rate zones, etc.)
 /// from raw activity data. Each metric declares its data dependencies and units.
-public protocol MetricCalc: Identifiable, CustomStringConvertible, Hashable, Sendable {
+public protocol CadenceMetricCalc: Identifiable, CustomStringConvertible, Hashable, Sendable {
     associatedtype Result: Sample
-    func compute(from store: [Store], in season: TrainingSeason) async throws -> Result
+    func compute(from store: [CadenceStore], in season: CadenceTrainingSeason) async throws -> Result
 }
 
 
-extension MetricCalc {
+extension CadenceMetricCalc {
     
 }

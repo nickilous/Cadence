@@ -8,36 +8,36 @@
 import Foundation
 
 
-public typealias TrainingWeekRange = ClosedRange<TrainingWeekMarker>
+public typealias CadenceTrainingWeekRange = ClosedRange<CadenceTrainingWeekMarker>
 
 
-public struct TrainingSeason: Identifiable, Hashable {
+public struct CadenceTrainingSeason: Identifiable, Hashable {
     public var id: UUID = .init()
-    public var seasonInterval: TrainingWeekRange
-    public var trainingPhases: [TrainingPhase]
+    public var seasonInterval: CadenceTrainingWeekRange
+    public var trainingPhases: [CadenceTrainingPhase]
     
-    public init(id: UUID = UUID(), seasonInterval: TrainingWeekRange, @SeasonPhaseBuilder builder: () -> [TrainingPhase]) {
+    public init(id: UUID = UUID(), seasonInterval: CadenceTrainingWeekRange, @SeasonPhaseBuilder builder: () -> [CadenceTrainingPhase]) {
         self.id = id
         self.seasonInterval = seasonInterval
         self.trainingPhases = builder()
     }
 }
 
-extension TrainingSeason: DateRangeComponent {
+extension CadenceTrainingSeason: DateRangeComponent {
     public var startDate: Date { seasonInterval.startDate }
     public var endDate: Date { seasonInterval.endDate }
 }
 
-public var trainingSeason: TrainingSeason {
-    .init(seasonInterval: .init(startDate: .now, endDate: .now)) {
-        TrainingPhase(id: .init(),
-                      activityType: .running,
-                      phaseType: .building,
-                      trainingWeekRange: .init(startDate: .now, endDate: .now))
-        TrainingPhase(id: .init(),
-                      activityType: .strength,
-                      phaseType: .building,
-                      trainingWeekRange: .init(startDate: .now, endDate: .now))
+public var trainingSeason: CadenceTrainingSeason {
+    .init(seasonInterval: CadenceTrainingWeekRange(startDate: Date.now, endDate: Date.now)) {
+        CadenceTrainingPhase(id: UUID(),
+                      activityType: ActivityOptions.running,
+                      phaseType: CadencePhaseType.building,
+                      trainingWeekRange: CadenceTrainingWeekRange(startDate: Date.now, endDate: Date.now))
+        CadenceTrainingPhase(id: UUID(),
+                      activityType: ActivityOptions.strength,
+                      phaseType: CadencePhaseType.building,
+                      trainingWeekRange: CadenceTrainingWeekRange(startDate: Date.now, endDate: Date.now))
     }
 }
 

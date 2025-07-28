@@ -18,7 +18,7 @@ public protocol SampleMetricCollection : Collection, Sample {
 
 
 
-public struct AveragePowerMetric: MetricCalc {
+public struct AveragePowerMetric: CadenceMetricCalc {
     public var id: UUID = .init()
     
     public var description: String { "Average Power" }
@@ -27,8 +27,8 @@ public struct AveragePowerMetric: MetricCalc {
     public var metrics: MetricOptions { .runningPower }
     
     
-    public func compute(from store: [Store], in season: TrainingSeason) async throws -> some SampleMetric<UnitPower> {
-        var supported = store.compactMap { store in
+    public func compute(from store: [CadenceStore], in season: CadenceTrainingSeason) async throws -> some SampleMetric<UnitPower> {
+        let supported = store.compactMap { store in
             if (store.supportedActivityTypes.contains(activities) && store.supportedMetricTypes.contains(metrics))
             { return store }
             else
@@ -40,7 +40,7 @@ public struct AveragePowerMetric: MetricCalc {
         var sampleMetrics: [any SampleMetric<UnitPower>] = []
         
         for store in supported {
-            var metric: [any SampleMetric<UnitPower>] = try await store.fetch(activities, metrics: metrics, in: season)
+            let metric: [any SampleMetric<UnitPower>] = try await store.fetch(activities, metrics: metrics, in: season)
             sampleMetrics = sampleMetrics + metric
         }
         

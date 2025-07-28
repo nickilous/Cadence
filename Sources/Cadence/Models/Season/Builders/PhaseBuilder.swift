@@ -10,7 +10,7 @@ import Foundation
 
 @resultBuilder
 public enum SeasonPhaseBuilder {
-    public static func buildBlock(_ phases: TrainingPhase...) -> [TrainingPhase] {
+    public static func buildBlock(_ phases: CadenceTrainingPhase...) -> [CadenceTrainingPhase] {
         phases
     }
 }

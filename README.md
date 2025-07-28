@@ -50,14 +50,14 @@ let metrics: MetricOptions = [.heartRate, .runningPower, .activeEnergyBurned]
 ### 3. Create a Training Season
 
 ```swift
-let season = TrainingSeason(seasonInterval: TrainingWeekRange(
+let season = CadenceTrainingSeason(seasonInterval: CadenceTrainingWeekRange(
     startDate: Date().addingTimeInterval(-30 * 24 * 3600), // 30 days ago
     endDate: Date()
 )) {
-    TrainingPhase(id: UUID(),
+    CadenceTrainingPhase(id: UUID(),
                   activityType: .running,
                   phaseType: .building,
-                  trainingWeekRange: TrainingWeekRange(startDate: startDate, endDate: endDate))
+                  trainingWeekRange: CadenceTrainingWeekRange(startDate: startDate, endDate: endDate))
 }
 ```
 
@@ -121,8 +121,8 @@ Build complex queries using the training query builder:
 
 ```swift
 let query = TrainingQuery(id: UUID()) {
-    TrainingSeason(seasonInterval: interval) {
-        TrainingPhase(id: UUID(), activityType: .running, phaseType: .peak, trainingWeekRange: range)
+    CadenceTrainingSeason(seasonInterval: interval) {
+        CadenceTrainingPhase(id: UUID(), activityType: .running, phaseType: .peak, trainingWeekRange: range)
     }
     ActivityTargetComponent(id: UUID(), activityTarget: .running) {
         MetricTargetComponent(id: UUID(), metricTarget: .heartRate)
@@ -133,7 +133,7 @@ let query = TrainingQuery(id: UUID()) {
 
 #### Fetching Query Results
 
-Use queries with any Store to fetch data in two formats:
+Use queries with any CadenceStore to fetch data in two formats:
 
 **Flat Array Results:**
 ```swift
@@ -204,7 +204,7 @@ struct AveragePowerMetricIntent: AppIntent {
     
     func perform() async throws -> some IntentResult {
         let metric = AveragePowerMetric()
-        let season = TrainingSeason(seasonInterval: .init(startDate: startDate, endDate: endDate)) {}
+        let season = CadenceTrainingSeason(seasonInterval: .init(startDate: startDate, endDate: endDate)) {}
         
         let result = try await metric.compute(from: [], in: season)
         return .result(value: result.convertToAppEntity())
@@ -214,17 +214,17 @@ struct AveragePowerMetricIntent: AppIntent {
 
 ## Custom Metric Calculations
 
-Implement your own metrics by conforming to `MetricCalc`:
+Implement your own metrics by conforming to `CadenceMetricCalc`:
 
 ```swift
-struct CustomHeartRateMetric: MetricCalc {
+struct CustomHeartRateMetric: CadenceMetricCalc {
     let id = UUID()
     var description: String { "Custom Heart Rate Analysis" }
     
     var activities: ActivityOptions { .running }
     var metrics: MetricOptions { .heartRate }
     
-    func compute(from stores: [Store], in season: TrainingSeason) async throws -> some SampleMetric<UnitFrequency> {
+    func compute(from stores: [CadenceStore], in season: CadenceTrainingSeason) async throws -> some SampleMetric<UnitFrequency> {
         // Your custom calculation logic here
         let heartRateData = try await fetchData(from: stores, in: season)
         let customValue = performAnalysis(on: heartRateData)

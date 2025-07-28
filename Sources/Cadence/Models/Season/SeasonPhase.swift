@@ -7,26 +7,26 @@
 
 import Foundation
 
-public enum PhaseType : CaseIterable, Sendable {
+public enum CadencePhaseType : CaseIterable, Sendable {
     case base
     case building
     case peak
 }
 
-public struct TrainingPhase: Identifiable, Hashable, Sendable {
+public struct CadenceTrainingPhase: Identifiable, Hashable, Sendable {
     public var id: UUID = .init()
     public var activityType: ActivityOptions
-    public var phaseType: PhaseType
-    public var trainingWeekRange: TrainingWeekRange
+    public var phaseType: CadencePhaseType
+    public var trainingWeekRange: CadenceTrainingWeekRange
     
-    public init(id: UUID, activityType: ActivityOptions, phaseType: PhaseType, trainingWeekRange: TrainingWeekRange) {
-        var id = id
+    public init(id: UUID, activityType: ActivityOptions, phaseType: CadencePhaseType, trainingWeekRange: CadenceTrainingWeekRange) {
+        self.id = id
         self.activityType = activityType
         self.phaseType = phaseType
         self.trainingWeekRange = trainingWeekRange
     }
     
-    public static func == (lhs: TrainingPhase, rhs: TrainingPhase) -> Bool {
+    public static func == (lhs: CadenceTrainingPhase, rhs: CadenceTrainingPhase) -> Bool {
         lhs.id == rhs.id &&
         lhs.activityType == rhs.activityType &&
         lhs.phaseType == rhs.phaseType &&

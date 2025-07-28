@@ -10,7 +10,7 @@ import Foundation
 /// A hierarchical dictionary structure for organizing query results by training season, activity type, and metric type.
 ///
 /// This typealias provides a convenient way to access training data in a structured format:
-/// - **First level**: `TrainingSeason` - The training season containing the data
+/// - **First level**: `CadenceTrainingSeason` - The training season containing the data
 /// - **Second level**: `ActivityOptions` - The type of activity (running, cycling, etc.)
 /// - **Third level**: `MetricOptions` - The specific metric (heart rate, power, etc.)
 /// - **Fourth level**: Array of `SampleMetricContainer<Result>` - The actual sample data
@@ -27,11 +27,11 @@ import Foundation
 ///     }
 /// }
 /// ```
-public typealias OrganizedQueryResults<Result: Unit> = [TrainingSeason: [ActivityOptions: [MetricOptions: [SampleMetricContainer<Result>]]]]
+public typealias OrganizedQueryResults<Result: Unit> = [CadenceTrainingSeason: [ActivityOptions: [MetricOptions: [SampleMetricContainer<Result>]]]]
 
 /// A protocol defining the interface for data stores that can provide training and fitness metrics.
 ///
-/// The `Store` protocol abstracts different data sources (like HealthKit, third-party fitness apps, or custom databases)
+/// The `CadenceStore` protocol abstracts different data sources (like HealthKit, third-party fitness apps, or custom databases)
 /// behind a common interface for fetching training data. Stores can support different combinations of activities
 /// and metrics, and provide both individual data fetching and complex query-based operations.
 ///
@@ -62,7 +62,7 @@ public typealias OrganizedQueryResults<Result: Unit> = [TrainingSeason: [Activit
 ///     let queryResults = try await healthStore.fetch(query: trainingQuery)
 /// }
 /// ```
-public protocol Store {
+public protocol CadenceStore {
     /// The activity types that this store can provide data for.
     ///
     /// Different stores may support different subsets of activities. For example, a running-focused
@@ -113,7 +113,7 @@ public protocol Store {
     ///     print("Heart rate: \(sample.measurment)")
     /// }
     /// ```
-    func fetch<Result:Unit>(_ activity: ActivityOptions, metrics: MetricOptions, in season: TrainingSeason) async throws -> [SampleMetricContainer<Result>]
+    func fetch<Result:Unit>(_ activity: ActivityOptions, metrics: MetricOptions, in season: CadenceTrainingSeason) async throws -> [SampleMetricContainer<Result>]
     
     /// Fetches training data using a complex query with multiple activities and metrics.
     ///
@@ -129,7 +129,7 @@ public protocol Store {
     ///
     /// ```swift
     /// let query = TrainingQuery(id: UUID()) {
-    ///     TrainingSeason(seasonInterval: interval) { /* phases */ }
+    ///     CadenceTrainingSeason(seasonInterval: interval) { /* phases */ }
     ///     ActivityTargetComponent(activityTarget: .running) {
     ///         MetricTargetComponent(metricTarget: .heartRate)
     ///         MetricTargetComponent(metricTarget: .runningPower)
@@ -148,7 +148,7 @@ public protocol Store {
     /// activities and metrics.
     ///
     /// - Parameter query: A training query containing activity targets, metrics, and season information
-    /// - Returns: Hierarchically organized results as `[TrainingSeason: [ActivityOptions: [MetricOptions: [SampleMetricContainer<Result>]]]]`
+    /// - Returns: Hierarchically organized results as `[CadenceTrainingSeason: [ActivityOptions: [MetricOptions: [SampleMetricContainer<Result>]]]]`
     /// - Throws: `CadenceError.unknownActivityOption` if no training season is found in the query, or other store-specific errors
     ///
     /// ## Usage Example
@@ -228,7 +228,7 @@ import HealthKit
 /// // Fetch data
 /// let heartRateData = try await healthStore.fetch(.running, metrics: .heartRate, in: season)
 /// ```
-extension HKHealthStore : Store {
+extension HKHealthStore : CadenceStore {
     /// The activity types supported by this HealthKit store.
     ///
     /// Currently returns an empty array as activity-specific filtering is handled
@@ -257,7 +257,7 @@ extension HKHealthStore : Store {
     
    
     
-    public func fetch<Result:Unit>(_ activity: ActivityOptions, metrics: MetricOptions, in season: TrainingSeason) async throws -> [SampleMetricContainer<Result>] {
+    public func fetch<Result:Unit>(_ activity: ActivityOptions, metrics: MetricOptions, in season: CadenceTrainingSeason) async throws -> [SampleMetricContainer<Result>] {
         guard let unit = defaultUnits[metrics] as? Result else { throw CadenceError.noSupportedMetrics(metrics) }
         return [SampleMetricContainer<Result>(
             activity: activity,
@@ -271,9 +271,9 @@ extension HKHealthStore : Store {
     public func fetch<Result:Unit>(query: TrainingQuery) async throws -> [SampleMetricContainer<Result>] {
         var results: [SampleMetricContainer<Result>] = []
         
-        let season = query.components.first(where: { $0 is TrainingSeason }) as? TrainingSeason
+        let season = query.components.first(where: { $0 is CadenceTrainingSeason }) as? CadenceTrainingSeason
         guard let season = season else {
-            throw CadenceError.unknownActivityOption("No TrainingSeason found in query")
+            throw CadenceError.unknownActivityOption("No CadenceTrainingSeason found in query")
         }
         
         let activityTargets = query.components.compactMap { $0 as? ActivityTargetComponent }
@@ -291,9 +291,9 @@ extension HKHealthStore : Store {
     public func fetchOrganized<Result:Unit>(query: TrainingQuery) async throws -> OrganizedQueryResults<Result> {
         var organizedResults: OrganizedQueryResults<Result> = [:]
         
-        let season = query.components.first(where: { $0 is TrainingSeason }) as? TrainingSeason
+        let season = query.components.first(where: { $0 is CadenceTrainingSeason }) as? CadenceTrainingSeason
         guard let season = season else {
-            throw CadenceError.unknownActivityOption("No TrainingSeason found in query")
+            throw CadenceError.unknownActivityOption("No CadenceTrainingSeason found in query")
         }
         
         let activityTargets = query.components.compactMap { $0 as? ActivityTargetComponent }

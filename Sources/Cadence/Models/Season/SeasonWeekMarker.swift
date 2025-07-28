@@ -8,7 +8,7 @@
 import Foundation
 
 
-public struct TrainingWeekMarker: Comparable, Hashable, Sendable {
+public struct CadenceTrainingWeekMarker: Comparable, Hashable, Sendable {
     public var year: Int
     public var month: Int
     public var week: Int
@@ -28,7 +28,7 @@ public struct TrainingWeekMarker: Comparable, Hashable, Sendable {
         self.week = week
     }
     
-    public static func < (lhs: TrainingWeekMarker, rhs: TrainingWeekMarker) -> Bool {
+    public static func < (lhs: CadenceTrainingWeekMarker, rhs: CadenceTrainingWeekMarker) -> Bool {
         if lhs.year != rhs.year {
             return lhs.year < rhs.year
         }

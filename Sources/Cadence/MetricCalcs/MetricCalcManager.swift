@@ -8,5 +8,5 @@
 import Foundation
 
 public class MetricCalcManager {
-    public static let metrics: [any MetricCalc] = []
+    public static let metrics: [any CadenceMetricCalc] = []
 }
