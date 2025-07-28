@@ -30,7 +30,7 @@ public struct PowerMetricEntity : AppEntity {
     
     
     public var displayRepresentation: DisplayRepresentation {
-        let image = "party.popper"
+        let image = "bolt.fill"
         let subtitle = LocalizedStringResource(
             "You have performed an average of \(measurement.formatted()).")
 
