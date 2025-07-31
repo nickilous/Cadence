@@ -113,6 +113,9 @@ MetricOptions.distanceWalkingRunning
 // Energy
 MetricOptions.activeEnergyBurned
 MetricOptions.basalEnergyBurned
+
+// Training Load
+MetricOptions.trimp
 ```
 
 ### Training Query System
@@ -210,6 +213,108 @@ struct AveragePowerMetricIntent: AppIntent {
         return .result(value: result.convertToAppEntity())
     }
 }
+```
+
+## TRIMP (Training Impulse) Metrics
+
+Cadence includes comprehensive TRIMP calculation support with multiple scientific methods and unit conversions between them.
+
+### Available TRIMP Methods
+
+```swift
+// Banister's original exponential formula
+let banisterTRIMP = BanisterTRIMPMetric(restingHeartRate: 50, maxHeartRate: 185)
+
+// Edwards' 5-zone approach
+let edwardsTRIMP = EdwardsTRIMPMetric(maxHeartRate: 185)
+
+// Lucia's 3-zone threshold-based method
+let luciaTRIMP = LuciaTRIMPMetric(lactateThreshold1: 150, lactateThreshold2: 170)
+
+// Training Load (Acute:Chronic ratio)
+let trainingLoad = TrainingLoadMetric(restingHeartRate: 50, maxHeartRate: 185)
+
+// Calculate TRIMP for a training season
+let result = try await banisterTRIMP.compute(from: stores, in: season)
+print("Banister TRIMP: \(result.measurment.value)")
+```
+
+### TRIMP Method Conversions
+
+Convert between different TRIMP calculation methods using built-in unit conversions:
+
+```swift
+// Create measurements using method-specific units
+let banisterValue = Measurement(value: 150.0, unit: UnitTRIMP.banisterTRIMP)
+let edwardsValue = Measurement(value: 100.0, unit: UnitTRIMP.edwardsTRIMP)
+
+// Convert between methods
+let banisterToEdwards = banisterValue.converted(to: .edwardsTRIMP)
+let edwardsToBanister = edwardsValue.converted(to: .banisterTRIMP)
+
+print("Banister 150 → Edwards: \(banisterToEdwards.formatted())")
+print("Edwards 100 → Banister: \(edwardsToBanister.formatted())")
+
+// Convert to common base unit (intensity-weighted minutes)
+let baseUnit = banisterValue.converted(to: .trimp)
+print("Base intensity: \(baseUnit.formatted())")
+```
+
+### Advanced TRIMP Conversions
+
+Use polynomial fitting for more accurate conversions based on your specific data:
+
+```swift
+// Create polynomial converter with custom coefficients
+let polynomialConverter = PolynomialTRIMPConverter(
+    method: .banister,
+    coefficients: [10.0, 1.3, 0.002] // y = 10 + 1.3x + 0.002x²
+)
+
+let customUnit = UnitTRIMP(symbol: "Custom-TRIMP", converter: polynomialConverter)
+let measurement = Measurement(value: 100.0, unit: customUnit)
+let converted = measurement.converted(to: .banisterTRIMP)
+```
+
+### Training Analysis with TRIMP
+
+Compare training loads across different calculation methods:
+
+```swift
+// Weekly training analysis
+let weeklyEdwardsTRIMP = [120.0, 95.0, 140.0, 110.0, 130.0, 85.0, 160.0]
+
+for (day, value) in weeklyEdwardsTRIMP.enumerated() {
+    let edwardsMeasurement = Measurement(value: value, unit: UnitTRIMP.edwardsTRIMP)
+    let banisterEquivalent = edwardsMeasurement.converted(to: .banisterTRIMP)
+    
+    print("Day \(day + 1): Edwards \(edwardsMeasurement.formatted()) → Banister \(banisterEquivalent.formatted())")
+}
+
+// Training load ratio analysis
+let trainingLoadResult = try await trainingLoad.compute(from: stores, in: season)
+let ratio = trainingLoadResult.measurment.value
+
+if ratio < 0.8 {
+    print("Low training stress - can increase load")
+} else if ratio > 1.3 {
+    print("High training stress - consider recovery")
+} else {
+    print("Optimal training stress zone")
+}
+```
+
+### App Intents with TRIMP
+
+Create Siri shortcuts for TRIMP calculations:
+
+```swift
+// Convert TRIMP results to App Intent entities
+let trimpResult = try await banisterTRIMP.compute(from: stores, in: season)
+let entity = trimpResult.convertToTRIMPAppEntity(trimpType: .banister)
+
+// Use in App Intent responses
+return .result(value: entity)
 ```
 
 ## Custom Metric Calculations

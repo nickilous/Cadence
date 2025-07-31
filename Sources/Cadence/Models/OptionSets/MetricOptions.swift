@@ -34,6 +34,9 @@ public struct MetricOptions: OptionSet, Hashable, CustomStringConvertible, Senda
     public static let basalEnergyBurned = MetricOptions(rawValue: 1 << 12)
     public static let activeEnergyBurned = MetricOptions(rawValue: 1 << 13)
     
+    //Training Load
+    public static let trimp = MetricOptions(rawValue: 1 << 14)
+    
     
     public static let all = MetricOptions([
         .heartRate,
@@ -49,7 +52,8 @@ public struct MetricOptions: OptionSet, Hashable, CustomStringConvertible, Senda
         .distanceWalkingRunning,
         .distanceCycling,
         .basalEnergyBurned,
-        .activeEnergyBurned])
+        .activeEnergyBurned,
+        .trimp])
     
     public var description: String {
         switch self {
@@ -65,6 +69,7 @@ public struct MetricOptions: OptionSet, Hashable, CustomStringConvertible, Senda
         case .runningStrideLength: return "Running Stride Length"
         case .runningVerticalOscillation: return "Running Vertical Oscillation"
         case .walkingHeartRateAverage: return "Walking Heart Rate Average"
+        case .trimp: return "Training Impulse (TRIMP)"
         default : return "Unknown"
         }
     }

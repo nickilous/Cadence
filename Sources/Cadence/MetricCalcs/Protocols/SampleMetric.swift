@@ -32,4 +32,26 @@ public extension SampleMetric where U == UnitPower {
               measurement: self.measurment)
     }
 }
+
+public extension SampleMetric where U == UnitTRIMP {
+    func convertToTRIMPAppEntity(trimpType: TRIMPEntityType) -> TRIMPMetricEntity {
+        .init(id: self.id as! UUID,
+              trimpType: trimpType,
+              type: .average,
+              startDate: self.startDate,
+              endDate: self.endDate,
+              measurement: self.measurment)
+    }
+}
+
+public extension SampleMetric where U == UnitFrequency {
+    func convertToHeartRateAppEntity(heartRateType: HeartRateEntityType) -> HeartRateMetricEntity {
+        .init(id: self.id as! UUID,
+              heartRateType: heartRateType,
+              type: .average,
+              startDate: self.startDate,
+              endDate: self.endDate,
+              measurement: self.measurment)
+    }
+}
 #endif
