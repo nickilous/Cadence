@@ -62,7 +62,7 @@ public typealias OrganizedQueryResults<Result: Unit> = [CadenceTrainingSeason: [
 ///     let queryResults = try await healthStore.fetch(query: trainingQuery)
 /// }
 /// ```
-public protocol CadenceStore {
+public protocol CadenceStore: Sendable {
     /// The activity types that this store can provide data for.
     ///
     /// Different stores may support different subsets of activities. For example, a running-focused

@@ -21,10 +21,19 @@ public struct EdwardsTRIMPMetric: CadenceMetricCalc {
     public var activities: ActivityOptions { [.running, .cycling] }
     public var metrics: MetricOptions { .heartRate }
     
-    private let maxHeartRate: Double
+    private let maxHeartRate: Double?
+    private let athlete: CadenceAthlete?
     
+    /// Initialize with specific max heart rate parameter
     public init(maxHeartRate: Double) {
         self.maxHeartRate = maxHeartRate
+        self.athlete = nil
+    }
+    
+    /// Initialize with athlete profile (fetches max HR from athlete's stores)
+    public init(athlete: CadenceAthlete) {
+        self.maxHeartRate = nil
+        self.athlete = athlete
     }
     
     public func compute(from store: [CadenceStore], in season: CadenceTrainingSeason) async throws -> Result {
@@ -51,6 +60,23 @@ public struct EdwardsTRIMPMetric: CadenceMetricCalc {
             throw CadenceError.noSupportedMetrics(metrics)
         }
         
+        // Get max heart rate (from athlete or direct value)
+        let maxHR: Double
+        
+        if let athlete = athlete {
+            // Fetch from athlete profile
+            guard let athleteMaxHR = try await athlete.maxHeartRate else {
+                throw CadenceError.missingRequiredParameter("Athlete missing max heart rate data")
+            }
+            maxHR = athleteMaxHR
+        } else {
+            // Use provided parameter
+            guard let maxHeartRate = maxHeartRate else {
+                throw CadenceError.missingRequiredParameter("Max heart rate required")
+            }
+            maxHR = maxHeartRate
+        }
+        
         // Edwards zones and multipliers
         var timeInZones = [0.0, 0.0, 0.0, 0.0, 0.0] // Zone 1-5
         let zoneMultipliers = [1.0, 2.0, 3.0, 4.0, 5.0]
@@ -61,7 +87,7 @@ public struct EdwardsTRIMPMetric: CadenceMetricCalc {
             let nextSample = sampleMetrics[i + 1]
             
             let hr = currentSample.measurment.converted(to: .beatsPerMinute).value
-            let hrPercent = hr / maxHeartRate
+            let hrPercent = hr / maxHR
             let duration = nextSample.startDate.timeIntervalSince(currentSample.startDate) / 60.0
             
             // Determine zone (50-60%, 60-70%, 70-80%, 80-90%, 90-100%)

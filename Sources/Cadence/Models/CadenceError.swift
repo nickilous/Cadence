@@ -64,6 +64,14 @@ public enum CadenceError : Error, LocalizedError {
     /// - Parameter MetricOptions: The metric options that aren't supported
     case noSupportedMetrics(MetricOptions)
     
+    /// A required parameter is missing for the operation.
+    ///
+    /// This error occurs when a metric calculation requires specific parameters
+    /// (such as heart rate data) that are not available or not provided.
+    ///
+    /// - Parameter String: Description of the missing parameter
+    case missingRequiredParameter(String)
+    
     /// A user-readable description of the error.
     ///
     /// Provides localized error messages that can be displayed to users or logged
@@ -78,6 +86,8 @@ public enum CadenceError : Error, LocalizedError {
             return "No supported activities"
         case .noSupportedMetrics:
             return "No supported metrics"
+        case .missingRequiredParameter(let parameter):
+            return "Missing required parameter: \(parameter)"
         }
     }
 }

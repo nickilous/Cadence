@@ -19,12 +19,22 @@ public struct BanisterTRIMPMetric: CadenceMetricCalc {
     public var activities: ActivityOptions { [.running, .cycling] }
     public var metrics: MetricOptions { .heartRate }
     
-    private let restingHeartRate: Double
-    private let maxHeartRate: Double
+    private let restingHeartRate: Double?
+    private let maxHeartRate: Double?
+    private let athlete: CadenceAthlete?
     
+    /// Initialize with specific heart rate parameters
     public init(restingHeartRate: Double, maxHeartRate: Double) {
         self.restingHeartRate = restingHeartRate
         self.maxHeartRate = maxHeartRate
+        self.athlete = nil
+    }
+    
+    /// Initialize with athlete profile (fetches HR data from athlete's stores)
+    public init(athlete: CadenceAthlete) {
+        self.restingHeartRate = nil
+        self.maxHeartRate = nil
+        self.athlete = athlete
     }
     
     public func compute(from store: [CadenceStore], in season: CadenceTrainingSeason) async throws -> Result {
@@ -60,8 +70,30 @@ public struct BanisterTRIMPMetric: CadenceMetricCalc {
         }
         let avgHR = totalHR / Double(sampleMetrics.count)
         
+        // Get heart rate parameters (from athlete or direct values)
+        let restingHR: Double
+        let maxHR: Double
+        
+        if let athlete = athlete {
+            // Fetch from athlete profile
+            guard let athleteRestingHR = try await athlete.restingHeartRate,
+                  let athleteMaxHR = try await athlete.maxHeartRate else {
+                throw CadenceError.missingRequiredParameter("Athlete missing resting or max heart rate data")
+            }
+            restingHR = athleteRestingHR
+            maxHR = athleteMaxHR
+        } else {
+            // Use provided parameters
+            guard let restingHeartRate = restingHeartRate,
+                  let maxHeartRate = maxHeartRate else {
+                throw CadenceError.missingRequiredParameter("Resting and max heart rate required")
+            }
+            restingHR = restingHeartRate
+            maxHR = maxHeartRate
+        }
+        
         // Calculate heart rate reserve
-        let hrReserve = (avgHR - restingHeartRate) / (maxHeartRate - restingHeartRate)
+        let hrReserve = (avgHR - restingHR) / (maxHR - restingHR)
         
         // Banister's TRIMP formula: Duration × HRr × 0.64 × e^(1.92 × HRr)
         let trimpValue = totalDuration * hrReserve * 0.64 * exp(1.92 * hrReserve)

@@ -24,6 +24,8 @@ public struct ActivityOptions: OptionSet, Hashable, CustomStringConvertible, Sen
     
     public static let dayToDay = ActivityOptions(rawValue: 1 << 7)
     
+    public static let all = ActivityOptions([.running, .cycling, .swimming, .strength, .functional, .yoga, .core, .dayToDay])
+    
     public var description: String {
         switch self {
         case .cycling: return "Cycling"

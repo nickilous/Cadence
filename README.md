@@ -6,6 +6,8 @@ A Swift package for fitness metric calculations and training data analysis, with
 
 - 🏃‍♂️ **Activity Tracking**: Support for running, cycling, swimming, strength training, and more
 - 📊 **Metric Calculations**: Heart rate, power, distance, energy, and performance metrics
+- 👤 **Athlete Profiles**: Centralized athlete data with automatic physiological parameter fetching
+- 🧮 **TRIMP Calculations**: Multiple scientifically-validated Training Impulse methods with conversions
 - 🗓️ **Training Seasons**: Organize workouts into phases (base, building, peak)
 - 🔗 **HealthKit Integration**: Seamless data fetching from Apple Health
 - 📱 **App Intents Support**: Siri shortcuts and iOS automation
@@ -215,24 +217,71 @@ struct AveragePowerMetricIntent: AppIntent {
 }
 ```
 
+## Athlete Profiles
+
+Cadence provides a centralized athlete model that automatically fetches physiological data from connected stores, making fitness calculations more personalized and easier to use.
+
+### Creating an Athlete Profile
+
+```swift
+let athlete = CadenceAthlete(
+    name: "Sarah Runner",
+    biologicalGender: .female,
+    dateOfBirth: Date(timeIntervalSince1970: 646704000), // June 1990
+    height: Measurement(value: 168, unit: .centimeters),
+    weight: Measurement(value: 62, unit: .kilograms),
+    stores: [healthStore, garminStore] // Your data sources
+)
+
+// Computed properties
+print("Age: \(athlete.age ?? 0) years")
+print("BMI: \(athlete.bmi ?? 0.0) (\(athlete.bmiCategory?.description ?? "Unknown"))")
+```
+
+### Automatic Physiological Data Fetching
+
+```swift
+// Automatically fetched from connected stores
+let restingHR = try await athlete.restingHeartRate  // From .restingHeartRate metric
+let maxHR = try await athlete.maxHeartRate          // From historical .heartRate analysis
+let zones = try await athlete.heartRateZones()     // 5-zone training system
+
+// Fallback to age-based estimates when store data unavailable
+let estimatedMaxHR = athlete.estimatedMaxHeartRate // 220 - age formula
+```
+
+### Training Zones
+
+```swift
+if let zones = try await athlete.heartRateZones() {
+    print("Zone 1 (\(zones.zone1.name)): \(Int(zones.zone1.lowerBound))-\(Int(zones.zone1.upperBound)) bpm")
+    print("Zone 2 (\(zones.zone2.name)): \(Int(zones.zone2.lowerBound))-\(Int(zones.zone2.upperBound)) bpm")
+    // ... zones 3-5
+    
+    // Check which zone a heart rate falls into
+    if let zone = zones.zoneFor(heartRate: 150) {
+        print("150 bpm is in \(zone.name)")
+    }
+}
+```
+
 ## TRIMP (Training Impulse) Metrics
 
-Cadence includes comprehensive TRIMP calculation support with multiple scientific methods and unit conversions between them.
+Cadence includes comprehensive TRIMP calculation support with multiple scientific methods, unit conversions between them, and seamless athlete profile integration.
 
 ### Available TRIMP Methods
 
 ```swift
-// Banister's original exponential formula
-let banisterTRIMP = BanisterTRIMPMetric(restingHeartRate: 50, maxHeartRate: 185)
+// Using athlete profiles (recommended)
+let athlete = CadenceAthlete(name: "John", stores: [healthStore])
 
-// Edwards' 5-zone approach
-let edwardsTRIMP = EdwardsTRIMPMetric(maxHeartRate: 185)
+let banisterTRIMP = BanisterTRIMPMetric(athlete: athlete)    // Exponential formula
+let edwardsTRIMP = EdwardsTRIMPMetric(athlete: athlete)      // 5-zone approach  
+let trainingLoad = TrainingLoadMetric(athlete: athlete)     // Acute:Chronic ratio
 
-// Lucia's 3-zone threshold-based method
-let luciaTRIMP = LuciaTRIMPMetric(lactateThreshold1: 150, lactateThreshold2: 170)
-
-// Training Load (Acute:Chronic ratio)
-let trainingLoad = TrainingLoadMetric(restingHeartRate: 50, maxHeartRate: 185)
+// Manual parameters (backwards compatible)
+let luciaTRIMP = LuciaTRIMPMetric(lactateThreshold1: 150, lactateThreshold2: 170) // Requires lab data
+let manualBanister = BanisterTRIMPMetric(restingHeartRate: 50, maxHeartRate: 185)
 
 // Calculate TRIMP for a training season
 let result = try await banisterTRIMP.compute(from: stores, in: season)
