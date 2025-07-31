@@ -14,6 +14,8 @@ public struct MetricOptions: OptionSet, Hashable, CustomStringConvertible, Senda
         self.rawValue = rawValue
     }
     
+    
+    
     //Vitals
     public static let heartRate = MetricOptions(rawValue: 1 << 0)
     public static let restingHeartRate = MetricOptions(rawValue: 1 << 1)
@@ -36,6 +38,14 @@ public struct MetricOptions: OptionSet, Hashable, CustomStringConvertible, Senda
     
     //Training Load
     public static let trimp = MetricOptions(rawValue: 1 << 14)
+    
+    //Athlete
+    public static let age = MetricOptions(rawValue: 1 << 15)
+    public static let biologicalGender = MetricOptions(rawValue: 1 << 16)
+    public static let height = MetricOptions(rawValue: 1 << 17)
+    public static let weight = MetricOptions(rawValue: 1 << 18)
+    public static let dateOfBirth = MetricOptions(rawValue: 1 << 19)
+    
     
     
     public static let all = MetricOptions([

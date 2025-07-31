@@ -88,6 +88,14 @@ public protocol CadenceStore: Sendable {
     /// might not be available on certain platforms or if the user hasn't granted permissions.
     var isAvailable: Bool { get }
     
+    var age: Int { get }
+    
+    var currentWeight: Measurement<UnitMass> { get }
+    
+    var currentHeight: Measurment<UnitLength> { get }
+    
+    var biologicalGenter: BiologicalGender { get }
+    
     /// Fetches training data for a specific activity and metric within a training season.
     ///
     /// This is the fundamental data fetching method that retrieves samples for a single
@@ -239,7 +247,7 @@ extension HKHealthStore : CadenceStore {
     ///
     /// Returns the health metrics that can be fetched from HealthKit on this device.
     /// Additional metrics may be added based on device capabilities and HealthKit updates.
-    public var supportedMetricTypes: [MetricOptions] { [.heartRate, .restingHeartRate] }
+    public var supportedMetricTypes: [MetricOptions] { [.heartRate, .restingHeartRate, .age, .weight, .runningPower, .dateOfBirth] }
     
     /// Whether HealthKit is available on this device.
     ///
