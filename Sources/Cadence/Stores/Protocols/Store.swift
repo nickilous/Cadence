@@ -92,9 +92,9 @@ public protocol CadenceStore: Sendable {
     
     var currentWeight: Measurement<UnitMass> { get }
     
-    var currentHeight: Measurment<UnitLength> { get }
+    var currentHeight: Measurement<UnitLength> { get }
     
-    var biologicalGenter: BiologicalGender { get }
+    var biologicalGender: BiologicalGender { get }
     
     /// Fetches training data for a specific activity and metric within a training season.
     ///
