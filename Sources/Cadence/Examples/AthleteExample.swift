@@ -17,10 +17,6 @@ public struct AthleteExample {
         // Create athlete profile with biological data
         let athlete = CadenceAthlete(
             name: "Sarah Runner",
-            biologicalGender: .female,
-            dateOfBirth: Calendar.current.date(from: DateComponents(year: 1990, month: 6, day: 15))!,
-            height: Measurement(value: 168, unit: .centimeters),
-            weight: Measurement(value: 62, unit: .kilograms),
             stores: [] // Would normally include HealthKit store, etc.
         )
         
@@ -28,10 +24,18 @@ public struct AthleteExample {
         print("Name: \(athlete.name ?? "Unknown")")
         print("Gender: \(athlete.biologicalGender?.description ?? "Unknown")")
         print("Age: \(athlete.age ?? 0) years")
-        print("Height: \(athlete.height?.formatted() ?? "Unknown")")
-        print("Weight: \(athlete.weight?.formatted() ?? "Unknown")")
-        if let bmi = athlete.bmi {
-            print("BMI: \(String(format: "%.1f", bmi)) (\(athlete.bmiCategory?.description ?? "Unknown"))")
+        if let height = await athlete.height {
+            print("Height: \(height.formatted())")
+        } else {
+            print("Height: Unknown")
+        }
+        if let weight = await athlete.weight {
+            print("Weight: \(weight.formatted())")
+        } else {
+            print("Weight: Unknown")
+        }
+        if let bmi = await athlete.bmi {
+            print("BMI: \(String(format: "%.1f", bmi)) (\(await athlete.bmiCategory?.description ?? "Unknown"))")
         }
         print()
         
@@ -116,15 +120,11 @@ public struct AthleteExample {
         
         let youngAthlete = CadenceAthlete(
             name: "Alex (22yo)",
-            biologicalGender: .male,
-            dateOfBirth: Calendar.current.date(from: DateComponents(year: 2002, month: 1, day: 1))!,
             stores: []
         )
         
         let matureAthlete = CadenceAthlete(
             name: "Chris (45yo)",
-            biologicalGender: .female,
-            dateOfBirth: Calendar.current.date(from: DateComponents(year: 1979, month: 1, day: 1))!,
             stores: []
         )
         

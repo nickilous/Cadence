@@ -12,14 +12,21 @@ public enum BiologicalGender: String, CaseIterable, Sendable {
     case male = "male"
     case female = "female" 
     case other = "other"
+    case notSet = "not set"
     
     public var description: String {
         switch self {
         case .male: return "Male"
         case .female: return "Female"
         case .other: return "Other"
+        case .notSet: return "Not Set"
         }
     }
+}
+
+public enum MeasurementSystem {
+    case metric
+    case imperial
 }
 
 /// Represents an athlete with biological and physiological characteristics
@@ -34,34 +41,41 @@ public struct CadenceAthlete: Identifiable, Hashable, Sendable {
     public let id: UUID
     public let name: String?
     
-    // MARK: - Biological Properties (User-Provided)
+    // MARK: - Biological Properties
     
-    public let biologicalGender: BiologicalGender?
-    public let dateOfBirth: Date?
-    public let height: Measurement<UnitLength>?
-    public let weight: Measurement<UnitMass>?
+    public var biologicalGender: BiologicalGender? {
+        let store = stores.first { store in
+            store.supportedMetricTypes.contains(.biologicalGender)
+        }
+        return store?.biologicalGender
+    }
+    
+    public var height: Measurement<UnitLength>? {
+        get async {
+            let store = stores.first { store in
+                store.supportedMetricTypes.contains(.height)
+            }
+            return await store?.currentHeight
+        }
+    }
+    public var weight: Measurement<UnitMass>? {
+        get async {
+            let store = stores.first { store in
+                store.supportedMetricTypes.contains(.weight)
+            }
+            return await store?.currentWeight
+        }
+    }
     
     // MARK: - Data Sources
     
-    public let stores: [CadenceStore]
+    let stores: [CadenceStore]
     
     // MARK: - Initialization
     
-    public init(
-        id: UUID = UUID(),
-        name: String? = nil,
-        biologicalGender: BiologicalGender? = nil,
-        dateOfBirth: Date? = nil,
-        height: Measurement<UnitLength>? = nil,
-        weight: Measurement<UnitMass>? = nil,
-        stores: [CadenceStore]
-    ) {
-        self.id = id
+    public init(name: String, stores: [CadenceStore]) {
+        self.id = UUID()
         self.name = name
-        self.biologicalGender = biologicalGender
-        self.dateOfBirth = dateOfBirth
-        self.height = height
-        self.weight = weight
         self.stores = stores
     }
     
@@ -69,30 +83,34 @@ public struct CadenceAthlete: Identifiable, Hashable, Sendable {
     
     /// Calculate age from date of birth
     public var age: Int? {
-        guard let dateOfBirth = dateOfBirth else { return nil }
-        let calendar = Calendar.current
-        let ageComponents = calendar.dateComponents([.year], from: dateOfBirth, to: Date())
-        return ageComponents.year
+        let store = stores.first { store in
+            store.supportedMetricTypes.contains(.age)
+        }
+        return store?.age
     }
     
     /// Calculate BMI from height and weight
     public var bmi: Double? {
-        guard let height = height?.converted(to: .meters).value,
-              let weight = weight?.converted(to: .kilograms).value,
-              height > 0 else { return nil }
-        
-        return weight / (height * height)
+        get async {
+            guard let height = await height?.converted(to: .meters).value,
+                  let weight = await weight?.converted(to: .kilograms).value,
+                  height > 0 else { return nil }
+            
+            return weight / (height * height)
+        }
     }
     
     /// BMI category based on standard ranges
     public var bmiCategory: BMICategory? {
-        guard let bmi = bmi else { return nil }
-        
-        switch bmi {
-        case ..<18.5: return .underweight
-        case 18.5..<25.0: return .normal
-        case 25.0..<30.0: return .overweight
-        default: return .obese
+        get async {
+            guard let bmi = await bmi else { return nil }
+            
+            switch bmi {
+            case ..<18.5: return .underweight
+            case 18.5..<25.0: return .normal
+            case 25.0..<30.0: return .overweight
+            default: return .obese
+            }
         }
     }
     
@@ -116,9 +134,9 @@ public struct CadenceAthlete: Identifiable, Hashable, Sendable {
             guard !supportedStores.isEmpty else { return nil }
             
             // Fetch resting heart rate data
-            var allSamples: [any SampleMetric<UnitFrequency>] = []
+            var allSamples: [SampleMetricContainer<UnitFrequency>] = []
             for store in supportedStores {
-                let samples: [any SampleMetric<UnitFrequency>] = try await store.fetch(
+                let samples: [SampleMetricContainer<UnitFrequency>] = try await store.fetch(
                     .all, // Any activity type
                     metrics: .restingHeartRate,
                     in: season
@@ -155,9 +173,9 @@ public struct CadenceAthlete: Identifiable, Hashable, Sendable {
             }
             
             // Fetch heart rate data
-            var allSamples: [any SampleMetric<UnitFrequency>] = []
+            var allSamples: [SampleMetricContainer<UnitFrequency>] = []
             for store in supportedStores {
-                let samples: [any SampleMetric<UnitFrequency>] = try await store.fetch(
+                let samples: [SampleMetricContainer<UnitFrequency>] = try await store.fetch(
                     [.running, .cycling], // High-intensity activities
                     metrics: .heartRate,
                     in: season
@@ -276,21 +294,12 @@ extension CadenceAthlete {
     public func hash(into hasher: inout Hasher) {
         hasher.combine(id)
         hasher.combine(name)
-        hasher.combine(biologicalGender)
-        hasher.combine(dateOfBirth)
-        hasher.combine(height)
-        hasher.combine(weight)
         // Note: stores are excluded from hashing since CadenceStore is not Hashable
     }
     
     /// Manual Equatable conformance (excludes stores since they can't be compared)
     public static func == (lhs: CadenceAthlete, rhs: CadenceAthlete) -> Bool {
-        return lhs.id == rhs.id &&
-               lhs.name == rhs.name &&
-               lhs.biologicalGender == rhs.biologicalGender &&
-               lhs.dateOfBirth == rhs.dateOfBirth &&
-               lhs.height == rhs.height &&
-               lhs.weight == rhs.weight
+        return lhs.id == rhs.id
         // Note: stores are excluded from equality since CadenceStore is not Equatable
     }
 }

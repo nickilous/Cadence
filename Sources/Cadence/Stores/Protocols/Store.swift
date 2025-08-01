@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import OSLog
 
 /// A hierarchical dictionary structure for organizing query results by training season, activity type, and metric type.
 ///
@@ -88,13 +89,13 @@ public protocol CadenceStore: Sendable {
     /// might not be available on certain platforms or if the user hasn't granted permissions.
     var isAvailable: Bool { get }
     
-    var age: Int { get }
+    var age: Int? { get }
     
-    var currentWeight: Measurement<UnitMass> { get }
+    var currentWeight: Measurement<UnitMass>? { get async }
     
-    var currentHeight: Measurement<UnitLength> { get }
+    var currentHeight: Measurement<UnitLength>? { get async }
     
-    var biologicalGender: BiologicalGender { get }
+    var biologicalGender: BiologicalGender? { get }
     
     /// Fetches training data for a specific activity and metric within a training season.
     ///
@@ -237,6 +238,8 @@ import HealthKit
 /// let heartRateData = try await healthStore.fetch(.running, metrics: .heartRate, in: season)
 /// ```
 extension HKHealthStore : CadenceStore {
+    var logger: Logger  { Logger(subsystem: "HealthKit Store Cadence Conformance", category: "Cadence Store") }
+    
     /// The activity types supported by this HealthKit store.
     ///
     /// Currently returns an empty array as activity-specific filtering is handled
@@ -247,7 +250,74 @@ extension HKHealthStore : CadenceStore {
     ///
     /// Returns the health metrics that can be fetched from HealthKit on this device.
     /// Additional metrics may be added based on device capabilities and HealthKit updates.
-    public var supportedMetricTypes: [MetricOptions] { [.heartRate, .restingHeartRate, .age, .weight, .runningPower, .dateOfBirth] }
+    public var supportedMetricTypes: [MetricOptions] { [.heartRate, .restingHeartRate, .age, .weight, .runningPower, .dateOfBirth, .age] }
+    
+    public var age: Int? {
+        let calendar = Calendar.current
+        //Age from date of birth components
+        do {
+            let components = try self.dateOfBirthComponents()
+            let dateOfBirth = calendar.date(from: components)!
+            let age = calendar.dateComponents([.year], from: dateOfBirth, to: .now)
+            
+            return age.year ?? 0
+        } catch {
+            logger.error("Could not calculate age from date of birth components")
+        }
+        return nil
+    }
+    
+    public var currentWeight:  Measurement<UnitMass>? {
+        get async {
+            var query: HKStatisticsQueryDescriptor = .init(predicate: .quantitySample(type: .init(.bodyMass)), options: .mostRecent)
+            do {
+                var result = try await query.result(for: self)
+                var weight = result?.mostRecentQuantity()?.doubleValue(for: .pound())
+                
+                return .init(value: weight ?? 0, unit: .pounds)
+            } catch {
+                
+            }
+            return nil
+        }
+    }
+    
+    public var currentHeight: Measurement<UnitLength>? {
+        get async {
+            var query: HKStatisticsQueryDescriptor = .init(predicate: .quantitySample(type: .init(.height)), options: .mostRecent)
+            do {
+                var result = try await query.result(for: self)
+                var height = result?.mostRecentQuantity()?.doubleValue(for: .foot())
+                
+                return .init(value: height ?? 0, unit: .feet)
+            } catch {
+                
+            }
+            return nil
+        }
+    }
+    
+    public var biologicalGender: BiologicalGender? {
+        do {
+            var biologicalSex = try self.biologicalSex().biologicalSex
+            switch biologicalSex {
+            case .female:
+                return .female
+            case .male:
+                return .male
+            case .notSet:
+                return .notSet
+            case .other:
+                return .other
+            default:
+                throw HKError(.errorNoData)
+            }
+        } catch {
+            logger.error("\(error.localizedDescription)")
+        }
+        return nil
+    }
+    
     
     /// Whether HealthKit is available on this device.
     ///
@@ -328,22 +398,34 @@ extension HKHealthStore : CadenceStore {
     }
     
     public func requestAuthorization(for metricTypes: [MetricOptions], options: [AuthorizationOption]) async throws {
-        var sampleTypes: Set<HKSampleType> = []
+        var types: Set<HKObjectType> = []
         for type in metricTypes {
             switch type {
             case .heartRate:
-                sampleTypes.insert(HKQuantityType(.heartRate))
+                types.insert(HKQuantityType(.heartRate))
             case .restingHeartRate:
-                sampleTypes.insert(HKQuantityType(.restingHeartRate))
+                types.insert(HKQuantityType(.restingHeartRate))
+            case .weight:
+                types.insert(HKQuantityType(.bodyMass))
+            case .height:
+                types.insert(HKQuantityType(.height))
+            case .age:
+                types.insert(HKCharacteristicType(.dateOfBirth))
+            case .biologicalGender:
+                types.insert(HKCharacteristicType(.biologicalSex))
             default: throw CadenceError.unknownMetricOption("in HKHealthStore requestAuthorization")
             }
         }
+        
+        let writeable = Set(types.compactMap { $0 as? HKSampleType })
+        let readable = Set(types.compactMap { $0 as? HKCharacteristicType })
+        
         if options.contains(.read) {
-            try await self.requestAuthorization(toShare: [], read: sampleTypes)
+            try await self.requestAuthorization(toShare: [], read: readable)
         } else if options.contains(.write) {
-            try await self.requestAuthorization(toShare: sampleTypes, read: [])
+            try await self.requestAuthorization(toShare: writeable, read: [])
         } else if options.contains([.read, .write]) {
-            try await self.requestAuthorization(toShare: sampleTypes, read: sampleTypes)
+            try await self.requestAuthorization(toShare: writeable, read: readable )
         }
     }
 }
