@@ -25,12 +25,14 @@ public struct TrainingLoadMetric: CadenceMetricCalc {
     public var metrics: MetricOptions { .heartRate }
     
     private let athlete: CadenceAthlete?
+    private let banisterTRIMP: BanisterTRIMPMetric
     private let acuteDays: Int = 7
     private let chronicDays: Int = 28
     
     /// Initialize with athlete profile (fetches HR data and gender from athlete's stores)
     public init(athlete: CadenceAthlete) {
         self.athlete = athlete
+        self.banisterTRIMP = BanisterTRIMPMetric(athlete: athlete)
     }
     
     public func compute(from store: [CadenceStore], in season: CadenceTrainingSeason) async throws -> Result {
@@ -46,17 +48,10 @@ public struct TrainingLoadMetric: CadenceMetricCalc {
             throw CadenceError.noSupportedActivities(activities)
         }
         
-        // Fetch from athlete profile (athlete is always non-nil)
-        guard let athlete = athlete else {
+        // Athlete validation (athlete is always non-nil)
+        guard athlete != nil else {
             throw CadenceError.missingRequiredParameter("Athlete required for TrainingLoadMetric")
         }
-        
-        guard let restingHR = try await athlete.restingHeartRate,
-              let maxHR = try await athlete.maxHeartRate else {
-            throw CadenceError.missingRequiredParameter("Athlete missing resting or max heart rate data")
-        }
-        
-        let biologicalGender = athlete.biologicalGender
         
         // Calculate daily TRIMP values for the chronic period
         let endDate = season.endDate
@@ -70,49 +65,15 @@ public struct TrainingLoadMetric: CadenceMetricCalc {
             
             let daySeason = CadenceTrainingSeason(seasonInterval: CadenceTrainingWeekRange(startDate: dayStart, endDate: dayEnd)) {}
             
-            var dayTRIMP = 0.0
-            
-            // Fetch heart rate data for this day
-            for store in supported {
-                do {
-                    let dayMetrics: [any SampleMetric<UnitFrequency>] = try await store.fetch(activities, metrics: metrics, in: daySeason)
-                    
-                    if !dayMetrics.isEmpty {
-                        // Calculate gender-specific Banister TRIMP for this day
-                        let totalDuration = dayMetrics.last!.endDate.timeIntervalSince(dayMetrics.first!.startDate) / 60.0
-                        let totalHR = dayMetrics.reduce(0.0) { sum, sample in
-                            sum + sample.measurment.converted(to: .beatsPerMinute).value
-                        }
-                        let avgHR = totalHR / Double(dayMetrics.count)
-                        let hrReserve = (avgHR - restingHR) / (maxHR - restingHR)
-                        
-                        // Validate heart rate reserve
-                        guard hrReserve >= 0 && hrReserve <= 1 else {
-                            continue // Skip invalid data for this day
-                        }
-                        
-                        // Apply gender-specific Banister TRIMP formula
-                        let dayTRIMPValue: Double
-                        switch biologicalGender {
-                        case .female:
-                            // Female formula: Duration × HRr × 0.86 × e^(1.67 × HRr)
-                            dayTRIMPValue = totalDuration * hrReserve * 0.86 * exp(1.67 * hrReserve)
-                        case .male:
-                            // Male formula: Duration × HRr × 0.64 × e^(1.92 × HRr)
-                            dayTRIMPValue = totalDuration * hrReserve * 0.64 * exp(1.92 * hrReserve)
-                        case .other, .notSet, .none:
-                            // Default to male formula when gender is unknown
-                            dayTRIMPValue = totalDuration * hrReserve * 0.64 * exp(1.92 * hrReserve)
-                        }
-                        
-                        dayTRIMP += dayTRIMPValue
-                    }
-                } catch {
-                    // No data for this day, TRIMP = 0
-                }
+            // Calculate TRIMP for this day using BanisterTRIMPMetric
+            do {
+                let dayTRIMPResult = try await banisterTRIMP.compute(from: supported, in: daySeason)
+                let dayTRIMP = dayTRIMPResult.measurment.value
+                dailyTRIMPs.append(dayTRIMP)
+            } catch {
+                // No data for this day, TRIMP = 0
+                dailyTRIMPs.append(0.0)
             }
-            
-            dailyTRIMPs.append(dayTRIMP)
         }
         
         // Calculate acute and chronic loads
