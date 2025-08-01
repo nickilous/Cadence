@@ -24,16 +24,11 @@ public struct EdwardsTRIMPMetric: CadenceMetricCalc {
     private let maxHeartRate: Double?
     private let athlete: CadenceAthlete?
     
-    /// Initialize with specific max heart rate parameter
-    public init(maxHeartRate: Double) {
-        self.maxHeartRate = maxHeartRate
-        self.athlete = nil
-    }
     
     /// Initialize with athlete profile (fetches max HR from athlete's stores)
     public init(athlete: CadenceAthlete) {
-        self.maxHeartRate = nil
         self.athlete = athlete
+        self.maxHeartRate = nil
     }
     
     public func compute(from store: [CadenceStore], in season: CadenceTrainingSeason) async throws -> Result {

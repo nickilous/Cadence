@@ -95,12 +95,7 @@ public struct AthleteExample {
         print("Comparison: Athlete-based vs Manual Parameters")
         print()
         
-        print("Before (Manual Parameters):")
-        print("let banister = BanisterTRIMPMetric(restingHeartRate: 50, maxHeartRate: 185)")
-        print("let edwards = EdwardsTRIMPMetric(maxHeartRate: 185)")
-        print()
-        
-        print("After (Athlete-based):")
+        print("Athlete-based API:")
         print("let athlete = CadenceAthlete(name: \"Sarah\", stores: [healthStore])")
         print("let banister = BanisterTRIMPMetric(athlete: athlete)")
         print("let edwards = EdwardsTRIMPMetric(athlete: athlete)")
@@ -108,6 +103,7 @@ public struct AthleteExample {
         
         print("Benefits:")
         print("• Automatic heart rate data fetching from stores")
+        print("• Gender-specific TRIMP calculations")
         print("• Centralized athlete profile")
         print("• Age-based estimates when store data unavailable")
         print("• Training zone calculations")
@@ -165,15 +161,14 @@ public struct AthleteExample {
         print()
         
         // Show backwards compatibility
-        print("Backwards Compatibility:")
-        print("• Old parameter-based initializers still work")
-        print("• Can mix athlete-based and parameter-based metrics")
-        print("• Gradual migration possible")
+        print("Current API Design:")
+        print("• Athlete-based initialization ensures consistent data")
+        print("• Gender-specific calculations when biological data available")
+        print("• Automatic fallbacks to estimates when store data unavailable")
         
-        let manualBanister = BanisterTRIMPMetric(restingHeartRate: 50, maxHeartRate: 185)
         let athleteBanister = BanisterTRIMPMetric(athlete: athleteNoStores)
         
-        print("✓ Manual parameters: BanisterTRIMPMetric(restingHeartRate:maxHeartRate:)")
         print("✓ Athlete-based: BanisterTRIMPMetric(athlete:)")
+        print("Note: Manual parameter initialization removed - now requires athlete profile")
     }
 }

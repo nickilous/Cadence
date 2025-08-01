@@ -7,33 +7,28 @@
 
 import Foundation
 
-/// Banister's original TRIMP calculation using exponential formula
+/// Gender-specific Banister TRIMP calculation using exponential formula
 ///
-/// This implementation uses Banister's 1975 formula: Duration × HRr × 0.64 × e^(1.92 × HRr)
+/// This implementation uses gender-specific modifications of Banister's formula:
+/// - Male: Duration × HRr × 0.64 × e^(1.92 × HRr)
+/// - Female: Duration × HRr × 0.86 × e^(1.67 × HRr)
 /// where HRr is heart rate reserve calculated as (HRexercise - HRrest) / (HRmax - HRrest)
+///
+/// The gender-specific coefficients account for physiological differences in cardiovascular
+/// response, lactate accumulation patterns, and metabolic stress between males and females.
 public struct BanisterTRIMPMetric: CadenceMetricCalc {
     public typealias Result = SampleMetricContainer<UnitTRIMP>
     public var id: UUID = .init()
-    public var description: String { "Banister TRIMP" }
+    public var description: String { "Gender-Specific Banister TRIMP" }
     
     public var activities: ActivityOptions { [.running, .cycling] }
     public var metrics: MetricOptions { .heartRate }
     
-    private let restingHeartRate: Double?
-    private let maxHeartRate: Double?
+   
     private let athlete: CadenceAthlete?
     
-    /// Initialize with specific heart rate parameters
-    public init(restingHeartRate: Double, maxHeartRate: Double) {
-        self.restingHeartRate = restingHeartRate
-        self.maxHeartRate = maxHeartRate
-        self.athlete = nil
-    }
-    
-    /// Initialize with athlete profile (fetches HR data from athlete's stores)
+    /// Initialize with athlete profile (fetches HR data and gender from athlete's stores)
     public init(athlete: CadenceAthlete) {
-        self.restingHeartRate = nil
-        self.maxHeartRate = nil
         self.athlete = athlete
     }
     
@@ -70,33 +65,48 @@ public struct BanisterTRIMPMetric: CadenceMetricCalc {
         }
         let avgHR = totalHR / Double(sampleMetrics.count)
         
-        // Get heart rate parameters (from athlete or direct values)
+        // Get heart rate parameters and biological gender (from athlete or direct values)
         let restingHR: Double
         let maxHR: Double
+        let genderForCalculation: BiologicalGender?
         
-        if let athlete = athlete {
-            // Fetch from athlete profile
-            guard let athleteRestingHR = try await athlete.restingHeartRate,
-                  let athleteMaxHR = try await athlete.maxHeartRate else {
-                throw CadenceError.missingRequiredParameter("Athlete missing resting or max heart rate data")
-            }
-            restingHR = athleteRestingHR
-            maxHR = athleteMaxHR
-        } else {
-            // Use provided parameters
-            guard let restingHeartRate = restingHeartRate,
-                  let maxHeartRate = maxHeartRate else {
-                throw CadenceError.missingRequiredParameter("Resting and max heart rate required")
-            }
-            restingHR = restingHeartRate
-            maxHR = maxHeartRate
+        // Fetch from athlete profile (athlete is always non-nil)
+        guard let athlete = athlete else {
+            throw CadenceError.missingRequiredParameter("Athlete required for BanisterTRIMPMetric")
         }
+        
+        guard let athleteRestingHR = try await athlete.restingHeartRate,
+              let athleteMaxHR = try await athlete.maxHeartRate else {
+            throw CadenceError.missingRequiredParameter("Athlete missing resting or max heart rate data")
+        }
+        
+        restingHR = athleteRestingHR
+        maxHR = athleteMaxHR
+        genderForCalculation = athlete.biologicalGender
         
         // Calculate heart rate reserve
         let hrReserve = (avgHR - restingHR) / (maxHR - restingHR)
         
-        // Banister's TRIMP formula: Duration × HRr × 0.64 × e^(1.92 × HRr)
-        let trimpValue = totalDuration * hrReserve * 0.64 * exp(1.92 * hrReserve)
+        // Validate heart rate reserve is within expected range
+        guard hrReserve >= 0 && hrReserve <= 1 else {
+            throw CadenceError.missingRequiredParameter("Invalid heart rate data: HRR \(hrReserve) outside valid range (0-1)")
+        }
+        
+        // Apply gender-specific Banister TRIMP formula
+        let trimpValue: Double
+        
+        switch genderForCalculation {
+        case .female:
+            // Female formula: Duration × HRr × 0.86 × e^(1.67 × HRr)
+            trimpValue = totalDuration * hrReserve * 0.86 * exp(1.67 * hrReserve)
+        case .male:
+            // Male formula: Duration × HRr × 0.64 × e^(1.92 × HRr)
+            trimpValue = totalDuration * hrReserve * 0.64 * exp(1.92 * hrReserve)
+        case .other, .notSet, .none:
+            // Default to male formula when gender is unknown or not specified
+            // This maintains backward compatibility and follows research convention
+            trimpValue = totalDuration * hrReserve * 0.64 * exp(1.92 * hrReserve)
+        }
         
         return SampleMetricContainer<UnitTRIMP>(
             activity: activities,
